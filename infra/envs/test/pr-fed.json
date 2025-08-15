@@ -1,0 +1,6 @@
+{
+  "name": "gh-pr",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:Mishravaibhav0032/CST8918-final:pull_request",
+  "audiences": ["api://AzureADTokenExchange"]
+}

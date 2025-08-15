@@ -1,0 +1,34 @@
+name: Terraform Static Checks
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform fmt
+        run: terraform -chdir=infra fmt -recursive -check
+
+      - name: terraform validate (test)
+        run: |
+          terraform -chdir=infra/envs/test init -backend=false
+          terraform -chdir=infra/envs/test validate
+
+      - name: terraform validate (prod)
+        if: ${{ hashFiles('infra/envs/prod/**.tf') != '' }}
+        run: |
+          terraform -chdir=infra/envs/prod init -backend=false
+          terraform -chdir=infra/envs/prod validate
+
+      - name: tfsec
+        uses:
+        with:
+          working_directory: infra

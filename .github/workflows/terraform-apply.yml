@@ -1,0 +1,36 @@
+name: Terraform Apply
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform apply (test)
+        run: |
+          terraform -chdir=infra/envs/test init \
+            -backend-config=../../backend.hcl \
+            -backend-config="key=infra.test.tfstate"
+          terraform -chdir=infra/envs/test apply -auto-approve -var-file=../../globals.tfvars
+
+      - name: terraform apply (prod)
+        run: |
+          terraform -chdir=infra/envs/prod init \
+            -backend-config=../../backend.hcl \
+            -backend-config="key=infra.prod.tfstate"
+          terraform -chdir=infra/envs/prod apply -auto-approve -var-file=../../globals.tfvars

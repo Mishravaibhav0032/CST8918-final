@@ -1,0 +1,43 @@
+name: Terraform PR Plan
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: terraform-linters/setup-tflint@v4
+      - name: tflint
+        run: |
+          tflint --init
+          tflint infra
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform plan (test)
+        run: |
+          terraform -chdir=infra/envs/test init \
+            -backend-config=../../backend.hcl \
+            -backend-config="key=infra.test.tfstate"
+          terraform -chdir=infra/envs/test plan -var-file=../../globals.tfvars
+
+      - name: terraform plan (prod)
+        run: |
+          terraform -chdir=infra/envs/prod init \
+            -backend-config=../../backend.hcl \
+            -backend-config="key=infra.prod.tfstate"
+          terraform -chdir=infra/envs/prod plan -var-file=../../globals.tfvars
